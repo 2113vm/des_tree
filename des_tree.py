@@ -27,33 +27,39 @@ class DecisionTree(BaseEstimator):
         self.create_tree(X, y, self.tree)
 
     def create_tree(self, X, y, link):
-        print(self.tree)
+
+        print(X.shape, y.shape)
         s0 = self.criterion(y)
         if s0 == 0:
             link['class'] = y[0]
         else:
-            if y.size >= self.min_samples_split:
+            if y.size > self.min_samples_split:
                 max_delta_s = 0
                 max_feature = None
                 max_enum = -1
-                for x in X:
-                    for enum, feature in enumerate(x):
-                        y_left = y[X[:, enum] < feature]
-                        y_right = y[X[:, enum] >= feature]
-                        delta_s = s0 - \
-                                  y_left.shape[0] * self.criterion(y_left) / y.shape[0] - \
-                                  y_right.shape[0] * self.criterion(y_right) / y.shape[0]
-                        if delta_s > max_delta_s:
-                            max_feature = feature
-                            max_enum = enum
-                            max_delta_s = delta_s
-                link[(max_enum, max_feature)] = [{}, {}]
-                self.create_tree(X[X[:, max_enum] < max_feature],
-                                 y[X[:, max_enum] < max_feature],
-                                 link[(max_enum, max_feature)][0])
-                self.create_tree(X[X[:, max_enum] >= max_feature],
-                                 y[X[:, max_enum] >= max_feature],
-                                 link[(max_enum, max_feature)][1])
+                for x_num, x in enumerate(X):
+                    if y[x_num] == y[x_num - 1]:
+                        continue
+                    else:
+                        for enum, feature in enumerate(x):
+                            if enum != 0 and enum != (X.shape[1] - 1):
+                                y_left = y[X[:, enum] < feature]
+                                y_right = y[X[:, enum] >= feature]
+                                if y_left.size and y_right.size:
+                                    delta_s = s0 - \
+                                              y_left.shape[0] * self.criterion(y_left) / y.shape[0] - \
+                                              y_right.shape[0] * self.criterion(y_right) / y.shape[0]
+                                    if delta_s > max_delta_s:
+                                        max_feature = feature
+                                        max_enum = enum
+                                        max_delta_s = delta_s
+                        link[(max_enum, max_feature)] = [{}, {}]
+                        self.create_tree(X[X[:, max_enum] < max_feature],
+                                         y[X[:, max_enum] < max_feature],
+                                         link[(max_enum, max_feature)][0])
+                        self.create_tree(X[X[:, max_enum] >= max_feature],
+                                         y[X[:, max_enum] >= max_feature],
+                                         link[(max_enum, max_feature)][1])
 
     def predict(self, X):
         answer = []
