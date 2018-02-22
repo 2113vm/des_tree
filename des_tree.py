@@ -47,7 +47,7 @@ class DecisionTree(BaseEstimator):
                 for num_feature, feature in enumerate(x):
                     if num_feature == 0 or num_feature == (X.shape[1] - 1):
                         continue
-                    s = self.Q(X, y, num_feature, feature)
+                    s = self.Q(X, y, y_shape, num_feature, feature)
                     if s is not None:
                         delta_s = s0 - s
                         if delta_s > max_delta_s:
@@ -62,12 +62,12 @@ class DecisionTree(BaseEstimator):
                              y[X[:, max_num_feature] >= max_feature],
                              link[(max_num_feature, max_feature)][1])
 
-    def Q(self, X, y, i, t):
+    def Q(self, X, y, y_shape, i, t):
         left = y[X[:, i] < t]
         right = y[X[:, i] >= t]
         if left.size and right.size:
-            return left.shape[0] * self.fun(left) / y.shape[0] + \
-                   right.shape[0] * self.fun(right) / y.shape[0]
+            return left.shape[0] * self.fun(left) / y_shape + \
+                   right.shape[0] * self.fun(right) / y_shape
         return None
 
     def predict(self, X):
