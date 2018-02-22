@@ -37,32 +37,33 @@ class DecisionTree(BaseEstimator):
             else:
                 link['class'] = y.mean()
         else:
-            if y.size > self.min_samples_split:
-                max_delta_s = 0
-                max_feature = None
-                max_enum = -1
-                for x_num, x in enumerate(X):
-                    if y[x_num] == y[x_num - 1]:
+            max_delta_s = 0
+            max_feature = None
+            max_num_feature = -1
+            y_shape = y.shape[0]
+            for x_num, x in enumerate(X):
+                if y[x_num] == y[x_num - 1]:
+                    continue
+                for num_feature, feature in enumerate(x):
+                    if num_feature == 0 or num_feature == (X.shape[1] - 1):
                         continue
-                    for enum, feature in enumerate(x):
-                        if enum != 0 and enum != (X.shape[1] - 1):
-                            y_left = y[X[:, enum] < feature]
-                            y_right = y[X[:, enum] >= feature]
-                            if y_left.size and y_right.size:
-                                delta_s = s0 - \
-                                          y_left.shape[0] * self.fun(y_left) / y.shape[0] - \
-                                          y_right.shape[0] * self.fun(y_right) / y.shape[0]
-                                if delta_s > max_delta_s:
-                                    max_feature = feature
-                                    max_enum = enum
-                                    max_delta_s = delta_s
-                link[(max_enum, max_feature)] = [{}, {}]
-                self.create_tree(X[X[:, max_enum] < max_feature],
-                                 y[X[:, max_enum] < max_feature],
-                                 link[(max_enum, max_feature)][0])
-                self.create_tree(X[X[:, max_enum] >= max_feature],
-                                 y[X[:, max_enum] >= max_feature],
-                                 link[(max_enum, max_feature)][1])
+                    y_left = y[X[:, num_feature] < feature]
+                    y_right = y[X[:, num_feature] >= feature]
+                    if y_left.size and y_right.size:
+                        delta_s = s0 - \
+                                  y_left.shape[0] * self.fun(y_left) / y_shape - \
+                                  y_right.shape[0] * self.fun(y_right) / y_shape
+                        if delta_s > max_delta_s:
+                            max_feature = feature
+                            max_num_feature = num_feature
+                            max_delta_s = delta_s
+            link[(max_num_feature, max_feature)] = [{}, {}]
+            self.create_tree(X[X[:, max_num_feature] < max_feature],
+                             y[X[:, max_num_feature] < max_feature],
+                             link[(max_num_feature, max_feature)][0])
+            self.create_tree(X[X[:, max_num_feature] >= max_feature],
+                             y[X[:, max_num_feature] >= max_feature],
+                             link[(max_num_feature, max_feature)][1])
 
     def predict(self, X):
         answer = []
