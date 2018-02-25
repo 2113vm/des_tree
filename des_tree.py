@@ -5,12 +5,13 @@ from sklearn.base import BaseEstimator
 from sklearn.datasets import make_classification, make_regression, load_digits, load_boston
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, mean_squared_error
+from sklearn.tree import DecisionTreeClassifier
 
 
 class DecisionTree(BaseEstimator):
 
     def __init__(self, max_depth=np.inf, min_samples_split=2,
-                 criterion='gini', debug=False):
+                 criterion='gini', debug=False, random_state=17):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.criterion = criterion
@@ -22,16 +23,17 @@ class DecisionTree(BaseEstimator):
         self.uniq = None
         self.debug = debug
         self.tree = {}
+        self.random_state = np.random.RandomState(random_state)
 
     def fit(self, X, y):
         self.uniq = np.unique(y)
         self.create_tree(X, y, self.tree)
 
     def create_tree(self, X, y, link):
-
-        print(X.shape, y.shape)
+        y_shape = y.shape[0]
+        count_feature = X.shape[1]
         s0 = self.fun(y)
-        if s0 == 0 or y.size <= self.min_samples_split:
+        if s0 == 0 or y_shape <= self.min_samples_split:
             if self.criterion == 'gini' or self.criterion == 'entropy':
                 link['class'] = round(y.mean())
             else:
@@ -40,20 +42,25 @@ class DecisionTree(BaseEstimator):
             max_delta_s = 0
             max_feature = None
             max_num_feature = -1
-            y_shape = y.shape[0]
-            for x_num, x in enumerate(X):
-                if y[x_num] == y[x_num - 1]:
-                    continue
-                for num_feature, feature in enumerate(x):
-                    if num_feature == 0 or num_feature == (X.shape[1] - 1):
+            count_s = 0
+            k = 0
+            while k < count_feature:
+                X = np.hstack((X, y.reshape((y_shape, 1))))
+                X = np.array(sorted(X, key=lambda obj: obj[k]))
+                X, y = X[:, :-1], X[:, -1]
+                uniq_x = np.unique(X[:, k])
+                for num_value, value in enumerate(uniq_x):
+                    if y[num_value] == y[num_value - 1]:
                         continue
-                    s = self.Q(X, y, y_shape, num_feature, feature)
+                    s = self.Q(X, y, y_shape, k, value)
+                    count_s += 1
                     if s is not None:
                         delta_s = s0 - s
                         if delta_s > max_delta_s:
-                            max_feature = feature
-                            max_num_feature = num_feature
+                            max_feature = value
+                            max_num_feature = k
                             max_delta_s = delta_s
+                k += 1
             link[(max_num_feature, max_feature)] = [{}, {}]
             self.create_tree(X[X[:, max_num_feature] < max_feature],
                              y[X[:, max_num_feature] < max_feature],
@@ -72,17 +79,17 @@ class DecisionTree(BaseEstimator):
 
     def predict(self, X):
         answer = []
-        link = self.tree
         for x in X:
-            key = link.keys()
+            link = self.tree
+            key = list(link.keys())[0]
             while key != 'class':
                 enum, feature = key
                 if x[enum] < feature:
-                    link = link[0]
+                    link = link[key][0]
                 else:
-                    link = link[1]
-                key = link.keys()
-            answer.append(link['key'])
+                    link = link[key][1]
+                key = list(link.keys())[0]
+            answer.append(link['class'])
         return answer
 
     def predict_proba(self, X):
@@ -104,7 +111,7 @@ class DecisionTree(BaseEstimator):
 
     @staticmethod
     def _variance(y):
-        return np.std(y) ** 2
+        return np.var(y) ** 2
 
     @staticmethod
     def _mad_median(y):
@@ -115,5 +122,8 @@ tree = DecisionTree(criterion='gini')
 X, y = load_digits(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=17)
 
+
+print(accuracy_score(DecisionTreeClassifier().fit(X_train, y_train).predict(X_test), y_test))
 tree.fit(X_train, y_train)
+print(accuracy_score(tree.predict(X_test), y_test))
 print(tree.tree)
