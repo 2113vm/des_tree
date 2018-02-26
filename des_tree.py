@@ -27,13 +27,13 @@ class DecisionTree(BaseEstimator):
 
     def fit(self, X, y):
         self.uniq = np.unique(y)
-        self.create_tree(X, y, self.tree)
+        self.create_tree(X, y, self.tree, 0)
 
-    def create_tree(self, X, y, link):
+    def create_tree(self, X, y, link, depth):
         y_shape = y.shape[0]
         count_feature = X.shape[1]
         s0 = self.fun(y)
-        if s0 == 0 or y_shape <= self.min_samples_split:
+        if s0 == 0 or y_shape <= self.min_samples_split or depth == self.max_depth:
             if self.criterion == 'gini' or self.criterion == 'entropy':
                 link['class'] = round(y.mean())
             else:
@@ -64,10 +64,10 @@ class DecisionTree(BaseEstimator):
             link[(max_num_feature, max_feature)] = [{}, {}]
             self.create_tree(X[X[:, max_num_feature] < max_feature],
                              y[X[:, max_num_feature] < max_feature],
-                             link[(max_num_feature, max_feature)][0])
+                             link[(max_num_feature, max_feature)][0], depth + 1)
             self.create_tree(X[X[:, max_num_feature] >= max_feature],
                              y[X[:, max_num_feature] >= max_feature],
-                             link[(max_num_feature, max_feature)][1])
+                             link[(max_num_feature, max_feature)][1], depth + 1)
 
     def Q(self, X, y, y_shape, i, t):
         left = y[X[:, i] < t]
