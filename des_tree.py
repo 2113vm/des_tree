@@ -11,7 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 class DecisionTree(BaseEstimator):
 
     def __init__(self, max_depth=np.inf, min_samples_split=2,
-                 criterion='gini', debug=False, random_state=17):
+                 criterion='gini', debug=False):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.criterion = criterion
@@ -23,10 +23,9 @@ class DecisionTree(BaseEstimator):
         self.uniq = None
         self.debug = debug
         self.tree = {}
-        self.random_state = np.random.RandomState(random_state)
 
     def fit(self, X, y):
-        self.uniq = np.unique(y)
+        self.uniq = np.sort(np.unique(y))
         self.create_tree(X, y, self.tree, 0)
 
     def create_tree(self, X, y, link, depth):
@@ -35,9 +34,9 @@ class DecisionTree(BaseEstimator):
         s0 = self.fun(y)
         if s0 == 0 or y_shape <= self.min_samples_split or depth == self.max_depth:
             if self.criterion == 'gini' or self.criterion == 'entropy':
-                link['class'] = round(y.mean())
+                link['class'] = [np.int8(y == u).mean() for u in self.uniq]
             else:
-                link['class'] = y.mean()
+                link['reg'] = y.mean()
         else:
             max_delta_s = 0
             max_feature = None
@@ -82,18 +81,37 @@ class DecisionTree(BaseEstimator):
         for x in X:
             link = self.tree
             key = list(link.keys())[0]
-            while key != 'class':
+            while key != 'class' and key != 'reg':
+                print(key)
                 enum, feature = key
                 if x[enum] < feature:
                     link = link[key][0]
                 else:
                     link = link[key][1]
                 key = list(link.keys())[0]
-            answer.append(link['class'])
+            if key == 'class':
+                answer.append(self.uniq[link['class'].index(max(link['class']))])
+            else:
+                answer.append(link['reg'])
         return answer
 
     def predict_proba(self, X):
-        pass
+        answer = []
+        for x in X:
+            link = self.tree
+            key = list(link.keys())[0]
+            while key != 'class' or key != 'reg':
+                enum, feature = key
+                if x[enum] < feature:
+                    link = link[key][0]
+                else:
+                    link = link[key][1]
+                key = list(link.keys())[0]
+            if key == 'class':
+                answer.append(link['class'])
+            else:
+                answer.append(link['reg'])
+        return answer
 
     def _entropy(self, y):
         s = 0
