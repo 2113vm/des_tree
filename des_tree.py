@@ -34,7 +34,7 @@ class DecisionTree(BaseEstimator):
         s0 = self.fun(y)
         if s0 == 0 or y_shape <= self.min_samples_split or depth == self.max_depth:
             if self.criterion == 'gini' or self.criterion == 'entropy':
-                link['class'] = [np.int8(y == u).mean() for u in self.uniq]
+                link['class'] = [round(np.int8(y == u).mean(), 3) for u in self.uniq]
             else:
                 link['reg'] = y.mean()
         else:
@@ -100,7 +100,7 @@ class DecisionTree(BaseEstimator):
         for x in X:
             link = self.tree
             key = list(link.keys())[0]
-            while key != 'class' or key != 'reg':
+            while key != 'class' and key != 'reg':
                 enum, feature = key
                 if x[enum] < feature:
                     link = link[key][0]
@@ -136,7 +136,7 @@ class DecisionTree(BaseEstimator):
         return np.sum(np.abs(y - np.median(y))) / y.size
 
 
-tree = DecisionTree(criterion='gini')
+tree = DecisionTree(criterion='gini', max_depth=5)
 X, y = load_digits(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=17)
 
@@ -144,4 +144,4 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 print(accuracy_score(DecisionTreeClassifier().fit(X_train, y_train).predict(X_test), y_test))
 tree.fit(X_train, y_train)
 print(accuracy_score(tree.predict(X_test), y_test))
-print(tree.tree)
+print(tree.predict_proba(X_test))
