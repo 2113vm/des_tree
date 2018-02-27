@@ -19,6 +19,7 @@ class DecisionTree(BaseEstimator):
                            'entropy': self._entropy,
                            'var': self._variance,
                            'mad_median': self._mad_median}
+        self.type_task = 'class' if criterion == 'gini' or criterion == 'entropy' else 'reg'
         self.fun = self.criterions[self.criterion]
         self.uniq = None
         self.debug = debug
@@ -33,7 +34,7 @@ class DecisionTree(BaseEstimator):
         count_feature = X.shape[1]
         s0 = self.fun(y)
         if s0 == 0 or y_shape <= self.min_samples_split or depth == self.max_depth:
-            if self.criterion == 'gini' or self.criterion == 'entropy':
+            if self.type_task == 'class':
                 link['class'] = [round(np.int8(y == u).mean(), 3) for u in self.uniq]
             else:
                 link['reg'] = y.mean()
@@ -41,7 +42,6 @@ class DecisionTree(BaseEstimator):
             max_delta_s = 0
             max_feature = None
             max_num_feature = -1
-            count_s = 0
             k = 0
             while k < count_feature:
                 X = np.hstack((X, y.reshape((y_shape, 1))))
@@ -52,7 +52,6 @@ class DecisionTree(BaseEstimator):
                     if y[num_value] == y[num_value - 1]:
                         continue
                     s = self.Q(X, y, y_shape, k, value)
-                    count_s += 1
                     if s is not None:
                         delta_s = s0 - s
                         if delta_s > max_delta_s:
@@ -81,15 +80,14 @@ class DecisionTree(BaseEstimator):
         for x in X:
             link = self.tree
             key = list(link.keys())[0]
-            while key != 'class' and key != 'reg':
-                print(key)
+            while key != self.type_task:
                 enum, feature = key
                 if x[enum] < feature:
                     link = link[key][0]
                 else:
                     link = link[key][1]
                 key = list(link.keys())[0]
-            if key == 'class':
+            if self.type_task == 'class':
                 answer.append(self.uniq[link['class'].index(max(link['class']))])
             else:
                 answer.append(link['reg'])
@@ -100,29 +98,26 @@ class DecisionTree(BaseEstimator):
         for x in X:
             link = self.tree
             key = list(link.keys())[0]
-            while key != 'class' and key != 'reg':
+            while key != self.type_task:
                 enum, feature = key
                 if x[enum] < feature:
                     link = link[key][0]
                 else:
                     link = link[key][1]
                 key = list(link.keys())[0]
-            if key == 'class':
-                answer.append(link['class'])
-            else:
-                answer.append(link['reg'])
+            answer.append(link[self.type_task])
         return answer
 
     def _entropy(self, y):
         s = 0
-        for u in self.uniq:
+        for u in np.unique(y):
             p_i = np.int8(y == u).mean()
-            s += p_i * np.log(p_i, 2)
+            s += p_i * np.log2(p_i)
         return -s
 
     def _gini(self, y):
         s = 0
-        for u in self.uniq:
+        for u in np.unique(y):
             p_i = np.int8(y == u).mean()
             s += p_i ** 2
         return 1 - s
@@ -136,7 +131,7 @@ class DecisionTree(BaseEstimator):
         return np.sum(np.abs(y - np.median(y))) / y.size
 
 
-tree = DecisionTree(criterion='gini', max_depth=5)
+tree = DecisionTree(criterion='gini')
 X, y = load_digits(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=17)
 
@@ -144,4 +139,5 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 print(accuracy_score(DecisionTreeClassifier().fit(X_train, y_train).predict(X_test), y_test))
 tree.fit(X_train, y_train)
 print(accuracy_score(tree.predict(X_test), y_test))
+print(tree.predict(X_test))
 print(tree.predict_proba(X_test))
