@@ -28,8 +28,10 @@ class DecisionTree(BaseEstimator):
     def fit(self, X, y):
         self.uniq = np.sort(np.unique(y))
         self.create_tree(X, y, self.tree, 0)
+        return self
 
     def create_tree(self, X, y, link, depth):
+        print('depth=',depth)
         y_shape = y.shape[0]
         count_feature = X.shape[1]
         s0 = self.fun(y)
@@ -91,7 +93,7 @@ class DecisionTree(BaseEstimator):
                 answer.append(self.uniq[link['class'].index(max(link['class']))])
             else:
                 answer.append(link['reg'])
-        return answer
+        return np.array(answer)
 
     def predict_proba(self, X):
         answer = []
@@ -106,7 +108,7 @@ class DecisionTree(BaseEstimator):
                     link = link[key][1]
                 key = list(link.keys())[0]
             answer.append(link[self.type_task])
-        return answer
+        return np.array(answer)
 
     def _entropy(self, y):
         s = 0
@@ -131,13 +133,13 @@ class DecisionTree(BaseEstimator):
         return np.sum(np.abs(y - np.median(y))) / y.size
 
 
-tree = DecisionTree(criterion='gini')
+tree = DecisionTree(criterion='gini', max_depth=2)
 X, y = load_digits(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=17)
 
 
 print(accuracy_score(DecisionTreeClassifier().fit(X_train, y_train).predict(X_test), y_test))
-tree.fit(X_train, y_train)
-print(accuracy_score(tree.predict(X_test), y_test))
+print(accuracy_score(tree.fit(X_train, y_train).predict(X_test), y_test))
 print(tree.predict(X_test))
 print(tree.predict_proba(X_test))
+print(tree.tree)
