@@ -1,11 +1,6 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from sklearn.base import BaseEstimator
-from sklearn.datasets import make_classification, make_regression, load_digits, load_boston
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, mean_squared_error
-from sklearn.tree import DecisionTreeClassifier
 
 
 class DecisionTree(BaseEstimator):
@@ -17,7 +12,7 @@ class DecisionTree(BaseEstimator):
         self.criterion = criterion
         self.criterions = {'gini': self._gini,
                            'entropy': self._entropy,
-                           'var': self._variance,
+                           'variance': self._variance,
                            'mad_median': self._mad_median}
         self.type_task = 'class' if criterion == 'gini' or criterion == 'entropy' else 'reg'
         self.fun = self.criterions[self.criterion]
@@ -31,7 +26,6 @@ class DecisionTree(BaseEstimator):
         return self
 
     def create_tree(self, X, y, link, depth):
-        print('depth=',depth)
         y_shape = y.shape[0]
         count_feature = X.shape[1]
         s0 = self.fun(y)
@@ -51,12 +45,12 @@ class DecisionTree(BaseEstimator):
                 X, y = X[:, :-1], X[:, -1]
                 uniq_x = np.unique(X[:, k])
                 for num_value, value in enumerate(uniq_x):
-                    if y[num_value] == y[num_value - 1]:
+                    if y[num_value] == y[num_value - 1] or num_value == 0 or num_value == y_shape-1:
                         continue
                     s = self.Q(X, y, y_shape, k, value)
                     if s is not None:
                         delta_s = s0 - s
-                        if delta_s > max_delta_s:
+                        if delta_s >= max_delta_s:
                             max_feature = value
                             max_num_feature = k
                             max_delta_s = delta_s
@@ -126,20 +120,8 @@ class DecisionTree(BaseEstimator):
 
     @staticmethod
     def _variance(y):
-        return np.var(y) ** 2
+        return np.var(y)
 
     @staticmethod
     def _mad_median(y):
-        return np.sum(np.abs(y - np.median(y))) / y.size
-
-
-tree = DecisionTree(criterion='gini', max_depth=2)
-X, y = load_digits(return_X_y=True)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=17)
-
-
-print(accuracy_score(DecisionTreeClassifier().fit(X_train, y_train).predict(X_test), y_test))
-print(accuracy_score(tree.fit(X_train, y_train).predict(X_test), y_test))
-print(tree.predict(X_test))
-print(tree.predict_proba(X_test))
-print(tree.tree)
+        return np.mean(np.abs(y - np.median(y)))
